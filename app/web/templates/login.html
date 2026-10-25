@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>登录 · 经营归因分析 Agent</title>
+<link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+<div class="login-wrap">
+  <section class="login-brand">
+    <div class="login-logo"><i></i>Attribution Agent</div>
+    <h1 class="login-title">
+      不只告诉你<em>数字是多少</em>，<br />
+      而是<em>为什么</em>，<br />
+      以及凭什么这么判断。
+    </h1>
+    <p class="login-sub">
+      面对一个模糊的经营疑问，系统会把它拆成多个可判定的假设，
+      逐个取证、逐个判定，最后给出带证据链、带缺口说明的归因结论。
+    </p>
+    <div class="login-flow">
+      <div class="login-step"><b>1</b><span><em>拆假设</em>　模糊问题 → 多个独立可验证的命题</span></div>
+      <div class="login-step"><b>2</b><span><em>逐项取证</em>　每个假设单独查数据，结果落库可追溯</span></div>
+      <div class="login-step"><b>3</b><span><em>判定收敛</em>　成立 / 不成立 / 证据不足，被否定的也写明依据</span></div>
+      <div class="login-step"><b>4</b><span><em>声明缺口</em>　查不到就说缺什么，不用推理补</span></div>
+    </div>
+  </section>
+
+  <section class="login-panel">
+    <form class="login-card" id="loginForm">
+      <h2>登录</h2>
+      <p>授权后进入分析工作台</p>
+
+      <div class="field">
+        <label for="username">用户名</label>
+        <input id="username" name="username" value="analyst" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="password">密码</label>
+        <input id="password" name="password" type="password" value="analyst123"
+               autocomplete="current-password" />
+      </div>
+
+      <button type="submit" class="btn-login" id="submitBtn">进入工作台</button>
+      <div class="login-err" id="err"></div>
+
+      <div class="login-demo">
+        演示账号<br />
+        <code>analyst / analyst123</code>　分析用户<br />
+        <code>admin / admin123</code>　　系统管理员
+      </div>
+    </form>
+  </section>
+</div>
+
+<script>
+const f = document.getElementById('loginForm');
+const err = document.getElementById('err');
+const btn = document.getElementById('submitBtn');
+
+f.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  err.textContent = '';
+  btn.disabled = true;
+  btn.textContent = '登录中…';
+  const body = new URLSearchParams({
+    username: document.getElementById('username').value.trim(),
+    password: document.getElementById('password').value,
+  });
+  try {
+    const r = await fetch('/auth/login', { method: 'POST', body });
+    if (r.redirected || r.ok) {
+      location.href = '/workbench';
+      return;
+    }
+    let msg = '登录失败';
+    try { msg = (await r.json()).detail || msg; } catch (_) {}
+    err.textContent = msg;
+  } catch (e2) {
+    err.textContent = '网络错误：' + e2.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '进入工作台';
+  }
+});
+</script>
+</body>
+</html>

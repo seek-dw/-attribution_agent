@@ -1,0 +1,40 @@
+[project]
+name = "attribution-agent"
+version = "0.1.0"
+description = "经营归因分析 Agent —— 多轮假设-取证-收敛的经营分析系统"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+keywords = ["agent", "attribution", "analytics", "fastapi", "llm"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+# 运行依赖
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "python-multipart>=0.0.9",
+    "httpx>=0.27",
+    "jinja2>=3.1",
+    "websockets>=12.0",
+    "cryptography>=42.0",
+]
+
+# 开发/测试依赖：pip install -e ".[dev]"
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>分析工作台 · 经营归因分析 Agent</title>
+<link rel="stylesheet" href="/static/app.css" />
+</head>
+<body data-user-id="{{ user.id }}" data-user-role="{{ user.role }}"
+      data-user-name="{{ user.display_name }}">
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><i></i>经营归因分析 Agent</div>
+
+    <nav id="nav">
+      <button data-view="workbench" class="on">工作台</button>
+      {% if user.role == 'admin' %}
+      <button data-view="sources">数据源</button>
+      <button data-view="users">用户</button>
+      <button data-view="config">配置</button>
+      <button data-view="logs">运行日志</button>
+      {% endif %}
+    </nav>
+
+    <div class="right">
+      <span class="conn" id="conn"><i></i><span id="connText">未连接</span></span>
+      <div class="user-chip">
+        <span class="av" id="userAv"></span>
+        <span id="userName">{{ user.display_name }}</span>
+        <span class="role">{{ user.role }}</span>
+      </div>
+      <button class="link-btn" onclick="location.href='/auth/logout'">退出</button>
+    </div>
+  </header>
+
+  <!-- ============================ 工作台 ============================ -->
+  <div class="workspace" id="viewWorkbench">
+    <!-- 左：会话 -->
+    <aside class="pane">
+      <div class="pane-head">
+        会话
+        <span class="spacer"></span>
+        <button class="btn sm primary" id="btnNewConv">新建</button>
+      </div>
+      <div class="pane-body" id="convList"></div>
+    </aside>
+
+    <!-- 中：对话 -->
+    <section class="pane chat-pane">
+      <div class="runbar" id="runbar" style="display:none">
+        <div class="row1">
+          <span class="pill" id="runStatus">queued</span>
+          <span class="step-name" id="runStep">准备中</span>
+          <span class="spacer" style="margin-left:auto"></span>
+          <button class="btn sm danger" id="btnCancel">取消</button>
+        </div>
+        <div class="prog"><i></i></div>
+      </div>
+
+      <div class="chat" id="chat">
+        <div class="empty-state">
+          <div class="icon">◈</div>
+          <h3>从一个模糊的经营问题开始</h3>
+          <p>系统会先确认口径，再拆假设取证。</p>
+          <div class="samples" id="samples">
+            <button data-q="为什么 2024-06 的销售额下滑了？">
+              <span>01</span>为什么 2024-06 的销售额下滑了？</button>
+            <button data-q="为什么 2024-06 的退款占比上升了？">
+              <span>02</span>为什么 2024-06 的退款占比上升了？</button>
+            <button data-q="销售额">
+              <span>03</span>销售额　（故意缺条件，看它怎么追问）</button>
+            <button data-q="为什么 2019-01 的销售额下滑了？">
+              <span>04</span>为什么 2019-01 的销售额下滑了？　（越界区间）</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="box">
+          <textarea id="input" rows="2"
+            placeholder="描述你的经营问题，例如：为什么 2024-06 的销售额下滑了？"></textarea>
+          <button class="btn primary" id="btnSend" style="height:36px">发送</button>
+        </div>
+        <div class="row">
+          <span><kbd>Ctrl</kbd> + <kbd>Enter</kbd> 发送</span>
+          <span class="spacer" style="margin-left:auto"></span>
+          <span id="composerHint"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右：结果 -->
+    <aside class="pane">
+      <div class="pane-head">
+        分析结果
+        <span class="spacer"></span>
+        <button class="btn sm" id="btnCopyAll" disabled>复制全文</button>
+        <button class="btn sm" id="btnExport" disabled>导出</button>
+      </div>
+
+      <div class="result-tabs" id="resultTabs">
+        <button data-tab="result" class="on">归因</button>
+        <button data-tab="evidence">证据<span class="n" id="tabEvN">0</span></button>
+        <button data-tab="trace">轨迹<span class="n" id="tabTrN">0</span></button>
+        <button data-tab="files">附件<span class="n" id="tabAtN">0</span></button>
+      </div>
+
+      <div class="pane-body" id="resultPane">
+        <div class="hint">尚无分析结果<br />完成一次分析后会在这里展示</div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============================ 数据源 ============================ -->
+  <div class="workspace" id="viewSources" style="display:none; grid-template-columns: 1fr">
+    <section class="pane">
+      <div class="pane-head">
+        数据源连接
+        <span class="spacer"></span>
+        <button class="btn sm primary" id="btnAddSource">登记数据源</button>
+        <button class="btn sm" id="btnReloadSources">刷新</button>
+      </div>
+      <div class="pane-body" style="padding:14px">
+        <div id="sourceList"></div>
+
+        <div class="card" id="addSourceCard" style="display:none; margin-top:14px">
+          <div class="card-head">登记新数据源</div>
+          <div class="card-body">
+            <div style="display:grid; grid-template-columns: 240px 1fr; gap:12px; align-items:end">
+              <div class="field" style="margin:0">
+                <label>名称</label>
+                <input id="dsName" placeholder="例如：2025Q1 经营库" />
+              </div>
+              <div class="field" style="margin:0">
+                <label>SQLite 文件路径（绝对路径或相对项目根目录）</label>
+                <input id="dsPath" placeholder="D:\data\business_2025.db" />
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; margin-top:12px">
+              <label style="font-size:12.5px; color:var(--ink-1); display:flex; gap:6px; align-items:center">
+                <input type="checkbox" id="dsReadonly" checked /> 只读打开（推荐）
+              </label>
+              <span class="spacer" style="margin-left:auto"></span>
+              <button class="btn" id="btnCancelAdd">取消</button>
+              <button class="btn primary" id="btnSaveSource">保存并测试</button>
+            </div>
+            <div style="margin-top:10px; font-size:11.5px; color:var(--ink-3); line-height:1.8">
+              需要至少包含这些表才能做完整归因：
+              <code style="font-family:var(--mono)">orders / products / categories /
+              traffic_daily / refunds / reviews / inventory / competitor_prices</code><br />
+              缺表不会报错，但对应假设会判「证据不足」——这是设计使然，不是故障。
+            </div>
+          </div>
+        </div>
+
+        <div id="sourceInspect"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================ 用户/认证 ============================ -->
+  <div class="workspace" id="viewUsers" style="display:none; grid-template-columns: 1fr">
+    <section class="pane">
+      <div class="pane-head">
+        用户与认证配置
+        <span class="spacer"></span>
+        <button class="btn sm primary" id="btnAddUser">新建用户</button>
+        <button class="btn sm" id="btnReloadUsers">刷新</button>
+      </div>
+      <div class="pane-body" style="padding:14px">
+        <div class="card" id="addUserCard" style="display:none; margin-bottom:14px">
+          <div class="card-head">新建用户</div>
+          <div class="card-body">
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px">
+              <div class="field" style="margin:0">
+                <label>用户名</label><input id="nuName" placeholder="zhangsan" />
+              </div>
+              <div class="field" style="margin:0">
+                <label>显示名</label><input id="nuDisplay" placeholder="张三" />
+              </div>
+              <div class="field" style="margin:0">
+                <label>密码（≥6 位）</label><input id="nuPwd" type="password" />
+              </div>
+              <div class="field" style="margin:0">
+                <label>角色</label>
+                <select id="nuRole" class="btn" style="width:100%; padding:9px">
+                  <option value="analyst">分析用户</option>
+                  <option value="admin">系统管理员</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:12px">
+              <span class="spacer" style="margin-left:auto"></span>
+              <button class="btn" id="btnCancelUser">取消</button>
+              <button class="btn primary" id="btnSaveUser">创建</button>
+            </div>
+          </div>
+        </div>
+        <div id="userList"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================ 配置 ============================ -->
+  <div class="workspace" id="viewConfig" style="display:none; grid-template-columns: 1fr">
+    <section class="pane">
+      <div class="pane-head">
+        系统配置
+        <span class="spacer"></span>
+        <span id="cfgChanged" style="font-size:11px;color:var(--ink-3);text-transform:none"></span>
+        <button class="btn sm" id="btnReloadCfg">重载配置</button>
+      </div>
+      <div class="pane-body" style="padding:14px">
+        <div class="config-grid" id="configGrid"></div>
+        <div class="hint" style="text-align:left;padding-left:4px;margin-top:14px">
+          修改值后点击「重载配置」即时生效，无需重启进程。
+          热更新记录变更前后差异，可在下方结果中核对。
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================ 日志 ============================ -->
+  <div class="workspace" id="viewLogs" style="display:none; grid-template-columns: 1fr">
+    <section class="pane">
+      <div class="pane-head">
+        运行日志
+        <span class="spacer"></span>
+        <select class="btn sm" id="logLevel" style="padding:4px 8px">
+          <option value="">全部级别</option>
+          <option value="info">info</option>
+          <option value="warning">warning</option>
+          <option value="error">error</option>
+        </select>
+        <button class="btn sm" id="btnReloadLogs">刷新</button>
+      </div>
+      <div class="pane-body" style="padding:0">
+        <table class="log-table">
+          <colgroup>
+            <col style="width:170px" /><col style="width:72px" />
+            <col style="width:88px" /><col style="width:76px" /><col />
+          </colgroup>
+          <thead><tr>
+            <th>时间</th><th>级别</th><th>类型</th><th>任务</th><th>内容</th>
+          </tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================ 计数器 ============================ -->
+  <div class="workspace" id="viewCounters" style="display:none; grid-template-columns: 1fr">
+    <section class="pane">
+      <div class="pane-head">
+        拒绝路径计数器
+        <span class="spacer"></span>
+        <span style="font-size:11px;color:var(--ink-3);text-transform:none">
+          虚线框 = 计数为 0，表示该路径从未被验证
+        </span>
+        <button class="btn sm" id="btnReloadCounters">刷新</button>
+      </div>
+      <div class="pane-body" style="padding:10px">
+        <div class="counter-grid" id="counterGrid"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

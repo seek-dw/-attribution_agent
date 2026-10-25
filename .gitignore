@@ -1,0 +1,57 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---- 虚拟环境 ----
+.venv/
+venv/
+env/
+ENV/
+
+# ---- 运行时数据（重要：不能上传）----
+# 数据库含演示账号与会话记录；secret.key 是会话签名密钥，
+# 上传等于把所有登录态签名泄露。
+data/
+data_shot/
+data_verify/
+data_audit/
+.pytest_data/
+*.db
+*.db-journal
+*.db-wal
+secret.key
+runtime_config.json
+
+# ---- 测试与工具缓存 ----
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Node（仅截图脚本用）----
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# ---- 编辑器与系统 ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 日志与临时文件 ----
+*.log
+tmp/
+temp/
+HANDOFF.md
