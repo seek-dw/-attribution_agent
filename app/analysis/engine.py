@@ -145,24 +145,37 @@ class AnalysisOutcome:
 class AnalysisEngine:
     def __init__(self, engine: Engine | None, emit: EventFn = _noop,
                  recorder: Callable[[Any], None] | None = None,
-                 user_id: int = 0, conversation_id: int = 0) -> None:
+                 user_id: int = 0, conversation_id: int = 0,
+                 task_id: int = 0) -> None:
         self.engine = engine
-        self.emit = emit
         self.recorder = recorder          # 工具调用留痕回调（FR-6.3）
         self.user_id = user_id
         self.conversation_id = conversation_id
+        self.task_id = task_id            # 2.1.10：消息必须带 task_id
         self.steps = 0
         self.max_steps = int(config.get("task_max_steps"))
         self.threshold = float(config.get("delta_threshold_pct"))
         self.outcome = AnalysisOutcome()
         self._last_hyps: list[Hypothesis] = []
+        # 2.1.10：八类实时消息的字段是原文约定，不能靠每个调用点自觉。
+        # 在 emit 出口统一补 task_id / conversation_id，一处修、处处生效。
+        base = {"task_id": self.task_id, "conversation_id": self.conversation_id}
+
+        def emit_with_ids(kind: str, payload: dict[str, Any]) -> None:
+            emit(kind, {**base, **payload})
+
+        self.emit = emit_with_ids
 
     # -- 步骤守卫（FR-5.9）------------------------------------------------
     def _step(self, name: str) -> None:
         self.steps += 1
         if self.steps > self.max_steps:
             raise RuntimeError(f"分析步骤超过上限 {self.max_steps}，任务终止")
-        self.emit("task_status", {"current_step": name, "step_count": self.steps})
+        # 2.1.10：task_status 消息必须含 task_id、task_status、current_step
+        self.emit("task_status", {"task_id": self.task_id,
+                                  "task_status": "running",
+                                  "current_step": name,
+                                  "step_count": self.steps})
 
     # -- 附件与文本检索取证 ------------------------------------------------
     def _collect_attachment_evidence(self, plan: Any,
